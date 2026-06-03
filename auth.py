@@ -82,12 +82,15 @@ def get_auth_url() -> str:
     return auth_url
 
 
-def exchange_code_for_token(code: str) -> bool:
-    """Exchange auth code for credentials. Returns True on success."""
+def exchange_code_for_token(code: str) -> tuple:
+    """
+    Exchange auth code for credentials.
+    Returns (True, "") on success, (False, error_message) on failure.
+    """
     # Prevent double-exchange (Streamlit re-runs can trigger this twice)
     if st.session_state.get("_code_exchanged") == code:
         log.info("Code already exchanged, skipping.")
-        return True
+        return True, ""
 
     try:
         flow = _build_flow()
@@ -97,12 +100,23 @@ def exchange_code_for_token(code: str) -> bool:
         _fetch_and_store_user_info(creds)
         st.session_state["_code_exchanged"] = code
         log.info("OAuth token exchange successful.")
-        return True
+        return True, ""
     except Exception as exc:
-        log.error("Token exchange failed: %s", exc, exc_info=True)
+        error_msg = str(exc)
+        log.error("Token exchange failed: %s", error_msg, exc_info=True)
         st.session_state.pop("credentials", None)
         st.session_state.pop("_code_exchanged", None)
-        return False
+        # Surface the real reason (redirect_uri_mismatch is most common)
+        if "redirect_uri_mismatch" in error_msg.lower():
+            return False, (
+                "❌ Redirect URI mismatch. "
+                "Make sure REDIRECT_URI in Render exactly matches "
+                "the Authorised Redirect URI in Google Cloud Console.\n\n"
+                f"Current REDIRECT_URI: `{_get_redirect_uri()}`"
+            )
+        if "invalid_grant" in error_msg.lower():
+            return False, "❌ Auth code expired or already used. Please sign in again."
+        return False, f"❌ Authentication error: {error_msg}"
 
 
 def get_credentials() -> Optional[Credentials]:
