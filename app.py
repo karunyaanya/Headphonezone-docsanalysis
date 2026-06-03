@@ -34,22 +34,72 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+
+    /* Metric cards */
     div[data-testid="metric-container"] {
-        background: #f8f9fb;
-        border: 1px solid #e0e4ea;
+        background: #1e1e2e;
+        border: 1px solid #313244;
         border-radius: 10px;
         padding: 0.8rem 1rem;
     }
+    div[data-testid="metric-container"] label { color: #a6adc8 !important; font-size: 0.78rem !important; }
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] { color: #cdd6f4 !important; }
+
+    /* Live log */
     .live-log {
-        background:#1e1e2e; color:#cdd6f4;
+        background:#11111b; color:#cdd6f4;
         font-family: 'Courier New', monospace; font-size: 0.78rem;
         padding: 10px 14px; border-radius: 8px;
         max-height: 220px; overflow-y: auto;
+        border: 1px solid #313244;
     }
     .log-ok   { color: #a6e3a1; }
     .log-warn { color: #f38ba8; }
     .log-info { color: #89b4fa; }
-    section[data-testid="stSidebar"] { background: #f0f2f8; }
+
+    /* ── BLACK SIDEBAR ── */
+    section[data-testid="stSidebar"] {
+        background: #0d0d0d !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #e0e0e0 !important;
+    }
+    section[data-testid="stSidebar"] .stTextArea textarea {
+        background: #1a1a1a !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #333 !important;
+    }
+    section[data-testid="stSidebar"] .stCheckbox label {
+        color: #e0e0e0 !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: #333 !important;
+    }
+    section[data-testid="stSidebar"] .stButton button {
+        background: #1a1a2e !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #444 !important;
+    }
+    section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+        background: #4f46e5 !important;
+        border: none !important;
+        color: white !important;
+    }
+    section[data-testid="stSidebar"] .stLinkButton a {
+        background: #4f46e5 !important;
+        color: white !important;
+        border: none !important;
+    }
+    section[data-testid="stSidebar"] .stDownloadButton button {
+        background: #1a3a2a !important;
+        color: #a6e3a1 !important;
+        border: 1px solid #2d5a3d !important;
+    }
+    /* Caption / small text */
+    section[data-testid="stSidebar"] small,
+    section[data-testid="stSidebar"] .stCaption {
+        color: #888 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,11 +142,9 @@ def _handle_oauth_callback():
         return
 
     if code:
-        # Show spinner while exchanging
         with st.spinner("Completing Google Sign-In…"):
-            ok = exchange_code_for_token(code)
+            ok, err_msg = exchange_code_for_token(code)
 
-        # Clear code from URL regardless of outcome
         st.query_params.clear()
 
         if ok:
@@ -104,9 +152,7 @@ def _handle_oauth_callback():
             log.info("Sign-in complete, rerunning.")
             st.rerun()
         else:
-            st.session_state["auth_error"] = (
-                "Authentication failed. Please try signing in again."
-            )
+            st.session_state["auth_error"] = err_msg or "Authentication failed. Please try again."
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
