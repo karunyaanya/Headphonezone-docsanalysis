@@ -1,0 +1,19 @@
+# render.yaml
+# Deploy on Render: https://render.com
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: import-document-verifier
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true --server.enableCORS=false
+    envVars:
+      - key: GOOGLE_CLIENT_ID
+        sync: false          # Set manually in Render dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false          # Set manually in Render dashboard
+      - key: REDIRECT_URI
+        sync: false          # Set to your Render app URL, e.g. https://import-document-verifier.onrender.com
+      - key: PYTHON_VERSION
+        value: "3.11.0"
