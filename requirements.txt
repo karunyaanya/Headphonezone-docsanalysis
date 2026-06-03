@@ -1,21 +1,9 @@
-# ──────────────────────────────────────────────
-# Import Document Verification System
-# Python dependencies
-# ──────────────────────────────────────────────
-
-# Web framework
-streamlit==1.35.0
-
-# Google APIs
-google-auth==2.29.0
-google-auth-oauthlib==1.2.0
-google-auth-httplib2==0.2.0
-google-api-python-client==2.130.0
-
-# Data handling
-pandas==2.2.2
-openpyxl==3.1.2
-
-# HTTP
-httplib2==0.22.0
-requests==2.32.3
+streamlit>=1.35.0,<2.0.0
+google-auth>=2.29.0
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.130.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+httplib2>=0.22.0
+requests>=2.31.0
