@@ -55,30 +55,36 @@ def _get_client_config() -> Dict[str, Any]:
     }
 
 
-def _get_redirect_uri() -> str:
-    """Get the redirect URI from config."""
-    try:
-        return st.secrets["google_oauth"].get("redirect_uri", REDIRECT_URI)
-    except (KeyError, FileNotFoundError):
-        return os.environ.get("REDIRECT_URI", REDIRECT_URI)
-
-
 def _build_flow() -> Flow:
     config = _get_client_config()
     redirect = _get_redirect_uri()
-    flow = Flow.from_client_config(config, scopes=SCOPES, redirect_uri=redirect)
+
+    flow = Flow.from_client_config(
+        config,
+        scopes=SCOPES,
+        redirect_uri=redirect,
+    )
+
     return flow
 
 
 def get_auth_url() -> str:
     flow = _build_flow()
+
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
     )
+
     st.session_state["oauth_state"] = state
+
+    # Store PKCE verifier if generated
+    if hasattr(flow, "code_verifier"):
+        st.session_state["code_verifier"] = flow.code_verifier
+
     log.info("Generated OAuth URL (state=%s)", state)
+
     return auth_url
 
 
@@ -87,37 +93,59 @@ def exchange_code_for_token(code: str) -> tuple:
     Exchange auth code for credentials.
     Returns (True, "") on success, (False, error_message) on failure.
     """
-    # Prevent double-exchange (Streamlit re-runs can trigger this twice)
+
     if st.session_state.get("_code_exchanged") == code:
         log.info("Code already exchanged, skipping.")
         return True, ""
 
     try:
         flow = _build_flow()
+
+        # Restore PKCE verifier
+        code_verifier = st.session_state.get("code_verifier")
+        if code_verifier:
+            flow.code_verifier = code_verifier
+
         flow.fetch_token(code=code)
+
         creds = flow.credentials
+
         _store_credentials(creds)
         _fetch_and_store_user_info(creds)
+
         st.session_state["_code_exchanged"] = code
+
         log.info("OAuth token exchange successful.")
+
         return True, ""
+
     except Exception as exc:
         error_msg = str(exc)
-        log.error("Token exchange failed: %s", error_msg, exc_info=True)
+
+        log.error(
+            "Token exchange failed: %s",
+            error_msg,
+            exc_info=True
+        )
+
         st.session_state.pop("credentials", None)
         st.session_state.pop("_code_exchanged", None)
-        # Surface the real reason (redirect_uri_mismatch is most common)
+
         if "redirect_uri_mismatch" in error_msg.lower():
             return False, (
                 "❌ Redirect URI mismatch. "
                 "Make sure REDIRECT_URI in Render exactly matches "
-                "the Authorised Redirect URI in Google Cloud Console.\n\n"
+                "the Authorized Redirect URI in Google Cloud Console.\n\n"
                 f"Current REDIRECT_URI: `{_get_redirect_uri()}`"
             )
-        if "invalid_grant" in error_msg.lower():
-            return False, "❌ Auth code expired or already used. Please sign in again."
-        return False, f"❌ Authentication error: {error_msg}"
 
+        if "invalid_grant" in error_msg.lower():
+            return False, (
+                "❌ OAuth verification failed. "
+                "Please sign in again."
+            )
+
+        return False, f"❌ Authentication error: {error_msg}"
 
 def get_credentials() -> Optional[Credentials]:
     creds_dict = st.session_state.get("credentials")
