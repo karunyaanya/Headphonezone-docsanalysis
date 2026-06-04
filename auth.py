@@ -57,7 +57,7 @@ def _get_client_config() -> Dict[str, Any]:
 
 def _build_flow() -> Flow:
     config = _get_client_config()
-    redirect = _get_redirect_uri()
+    redirect = os.environ.get("REDIRECT_URI", REDIRECT_URI)
 
     flow = Flow.from_client_config(
         config,
@@ -136,7 +136,7 @@ def exchange_code_for_token(code: str) -> tuple:
                 "❌ Redirect URI mismatch. "
                 "Make sure REDIRECT_URI in Render exactly matches "
                 "the Authorized Redirect URI in Google Cloud Console.\n\n"
-                f"Current REDIRECT_URI: `{_get_redirect_uri()}`"
+                f"Current REDIRECT_URI: `{os.environ.get('REDIRECT_URI', REDIRECT_URI)}`"
             )
 
         if "invalid_grant" in error_msg.lower():
